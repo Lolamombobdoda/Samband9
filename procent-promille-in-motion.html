@@ -526,6 +526,14 @@ function numObj(S,str,cls,x,y,o=0,fs=24){
   ob.left=-(str.length-1)*ob.cw/2; ob.w=str.length*ob.cw; ob.h=fs*1.15;
   numLayout(ob); ob.x=x; ob.y=y; ob.o=o; return ob.ap();
 }
+// a copy of a written number flies onto the cells of a hopping number, digit over digit, then becomes it
+async function flyNum(src,num){
+  const c=clone(src); await anim(c,{o:1},450);
+  const vis=num.cs.filter(x=>!x.hid).length, props={x:num.x+num.left+(vis-1)/2*num.cw,y:num.y};
+  if(src.fs&&num.fs) props.s=num.fs/src.fs;
+  await anim(c,props,1200);
+  await all([anim(c,{o:0},650),anim(num,{o:1},650)]); c.kill();
+}
 const markAt=ob=>ob.cs.findIndex(c=>c.ch===',');
 // a zero is written in front: the digits slide right one place to make room, the zero fades in
 async function frontZero(ob){const z=numCell(ob,'0'); z.t.style.opacity=0; ob.cs.unshift(z); const l0=ob.left-ob.cw; await ob.S.tween(700,p=>{ob.left=l0+ob.cw*p; z.t.style.opacity=p; numLayout(ob);}); ob.left=l0+ob.cw; numLayout(ob); return z;}
@@ -645,7 +653,7 @@ async function runIntro(S,U,nstr){
   const [ip]=String(nstr).split(',');
   const num=numObj(S,nstr,'',K.dv.x,K.dv.y,0,FB);
   num.left=-K.dv.w/2+num.cw/2; numLayout(num);
-  await fly(K.fn,num); await S.wait(500);
+  await flyNum(K.fn,num); await S.wait(500);
   await swell(K.fd,1100);
   await hopLeft(num,U.hops);
   K.num=num; await settle(K,'num'); await S.wait(700);
@@ -920,7 +928,7 @@ async function runSteps(ctx,steps){
       const slot=K[b], src=K[a], [ip]=String(src.str).replace(DM,',').split(',');
       const num=numObj(S,String(src.str).replace(DM,','),'',slot.x,slot.y,0,slot.fs);
       num.left=-slot.w/2+num.cw/2; numLayout(num);
-      await fly(src,num); await S.wait(400);
+      await flyNum(src,num); await S.wait(400);
       await swell(K[c],1100);
       await hopLeft(num,d);
       K[b+'n']=num; await settle(K,b+'n'); K[b]=K[b+'n'];
