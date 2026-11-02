@@ -1,0 +1,1022 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Procent och promille</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;600;800&display=swap">
+<style>
+/* Stage 1: the definition and the triangle. Stage 2: examples worked with a small triangle.
+   Purple = andel, orange = del, blue = hel, green = highlighting and the step being done. */
+:root{
+  --bg:#EEF1F4; --panel:#FFFFFF; --ink:#172031; --mute:#7D879A; --rule:#D3D9E2; --dim:rgba(16,22,34,.16);
+  --cA:#DD5F0B; --cB:#2357D4; --cF:#0E8A5A; --cO:#7A3FD8;
+  --font:'Azeret Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1015; --panel:#161A21; --ink:#E6E9EF; --mute:#77839A; --rule:#2B323E; --dim:rgba(0,0,0,.45);
+  --cA:#FF8A42; --cB:#6E97FF; --cF:#34C98A; --cO:#B08CFF; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1015; --panel:#161A21; --ink:#E6E9EF; --mute:#77839A; --rule:#2B323E; --dim:rgba(0,0,0,.45);
+  --cA:#FF8A42; --cB:#6E97FF; --cF:#34C98A; --cO:#B08CFF; color-scheme:dark}
+
+body{margin:0;font-size:14px;background:var(--bg);color:var(--ink);font-family:var(--font)}
+[hidden]{display:none!important}
+.wrap{max-width:936px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));padding-block:36px 72px;display:flex;flex-direction:column;gap:44px}
+.top{display:flex;flex-direction:column;align-items:center;gap:18px}
+.titles{text-align:center}
+.titles h1{font:800 clamp(28px,5.5vw,46px)/1.1 var(--font);margin:0;letter-spacing:-.01em;text-wrap:balance}
+.titles .by{margin:8px 0 0;font-size:15px;color:var(--mute);letter-spacing:.02em}
+.dimmer{position:fixed;inset:0;background:var(--dim);opacity:0;pointer-events:none;transition:opacity 2s;z-index:1}
+body.focusing .dimmer{opacity:1}
+.top,.sec,.note{position:relative;transition:opacity 2s}
+body.focusing .dimmer,body.focusing .top,body.focusing .sec,body.focusing .note{transition-duration:.9s}
+body.focusing .top,body.focusing .sec:not(.active),body.focusing .note{opacity:.4}
+.sec.active{z-index:2}
+.ops{font-size:clamp(48px,11vw,96px);font-weight:800;letter-spacing:.12em;line-height:1}
+.legend{display:flex;justify-content:center}
+.legend svg{width:min(380px,100%);height:auto}
+.dmbox{display:flex;flex-direction:column;align-items:center;gap:6px}
+.dmbox .q{font:800 18px/1 var(--font);color:var(--mute)}
+.dmbox div{display:flex;gap:8px}
+.dmbox button{font:600 15px/1 var(--font);padding:7px 11px;border-radius:12px;border:1.5px solid var(--rule);background:var(--panel);color:var(--ink);cursor:pointer}
+.dmbox button[aria-pressed="true"]{border:2px solid var(--ink)}
+.sec{display:grid;grid-template-columns:152px minmax(0,1fr);gap:16px;align-items:start}
+.glyph{display:flex;justify-content:center;padding-top:10px}
+.glyph svg{width:80px;height:72px}
+@media (max-width:640px){.sec{grid-template-columns:minmax(0,1fr)}.glyph{justify-content:flex-start;padding-top:0}.glyph svg{width:56px;height:50px}}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:16px;overflow:hidden;min-width:0}
+svg.stage{display:block;width:100%;height:auto}
+.bar{display:flex;flex-wrap:wrap;gap:8px;padding:12px;border-top:1px solid var(--rule);align-items:center}
+.exs{display:flex;flex-wrap:wrap;gap:8px;flex:1;min-width:0}
+.card button{font:600 17px/1 var(--font);padding:9px 16px;border-radius:14px;border:1.5px solid var(--rule);background:var(--panel);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:opacity .6s,filter .6s,border-color .3s}
+.card button:hover:not(:disabled){border-color:var(--mute)}
+.card button.on{border:2px solid var(--ink)}
+.card button:disabled{opacity:.3;filter:grayscale(1);cursor:not-allowed}
+.bar .replay{font-size:22px;padding:8px 14px;align-self:stretch;min-width:52px}
+.bar .pp[aria-pressed="true"]{border:2px solid var(--cF);color:var(--cF)}
+button:focus-visible{outline:3px solid var(--cB);outline-offset:2px}
+.kA{color:var(--cA)} .kB{color:var(--cB)} .kO{color:var(--cO)}
+/* stage 2 buttons */
+.meth{display:flex;flex-direction:column;gap:8px;padding-right:12px;margin-right:4px;border-right:1px solid var(--rule);align-self:stretch;justify-content:center}
+.meth button{padding:7px 12px;min-width:64px}
+.meth button[aria-pressed="true"]{border:2px solid var(--ink)}
+.exs2{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0}
+.erow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.erow .ric{width:34px;height:30px;flex:none}
+.card .exs2 button{font-size:15px;padding:7px 12px;min-height:44px}
+.card button svg{display:block}
+.mf{display:inline-flex;flex-direction:column;align-items:center;line-height:1;font-size:.85em}
+.mf>span:first-child{border-bottom:1.5px solid currentColor;padding:0 2px 2px}
+.mf>span:last-child{padding:2px 2px 0}
+
+svg text{font-family:var(--font);font-weight:600}
+.w{fill:var(--ink);font-size:26px;transition:fill .5s}
+.w.cA{fill:var(--cA)} .w.cB{fill:var(--cB)} .w.cO{fill:var(--cO)} .w.cF{fill:var(--cF)} .w.hot{fill:var(--cF)}
+.bl{stroke:var(--ink);stroke-width:2.5;stroke-linecap:round;transition:stroke .5s,stroke-width .5s}
+.bl.hot{stroke:var(--cF);stroke-width:5}
+.tri{fill:none;stroke:var(--mute);stroke-width:2;stroke-linejoin:round}
+.ring{fill:none;stroke:var(--cF);stroke-width:2.5}
+.whole{fill:none;stroke:var(--cB);stroke-width:2.5}
+.dt{fill:var(--ink);transition:fill .6s}
+.dt.cA{fill:var(--cA)} .dt.cB{fill:var(--cB)} .dt.cO{fill:var(--cO)}
+.pieb{fill:var(--panel)}
+.pies{fill:var(--mute);fill-opacity:.45;transition:fill .6s,fill-opacity .6s}
+.pies.cO{fill:var(--cO);fill-opacity:.85}
+.piel{stroke:var(--ink);stroke-width:1;stroke-opacity:.5}
+.pieo{fill:none;stroke:var(--ink);stroke-width:1.6}
+.cbody{fill:var(--bg);stroke:var(--mute);stroke-width:1.5}
+.cdisp{fill:var(--panel);stroke:var(--rule);stroke-width:1.5}
+.ckey{fill:var(--panel);stroke:var(--rule);stroke-width:1.2}
+.cexp{fill:var(--mute);font-size:13px}
+.lg text{font-size:15px}
+.lg .t{fill:var(--ink)} .lg .tA{fill:var(--cA)} .lg .tB{fill:var(--cB)} .lg .tO{fill:var(--cO)}
+.lg .cell{fill:var(--cA);fill-opacity:.85}
+.lg .out{fill:none;stroke:var(--ink);stroke-width:1.5}
+.lg .cut{stroke:var(--mute);stroke-width:1}
+.lg .brA{fill:none;stroke:var(--cA);stroke-width:1.5}
+.lg .brB{fill:none;stroke:var(--cB);stroke-width:1.5}
+.lg .fb{stroke:var(--ink);stroke-width:1.5}
+.gl{fill:none;stroke:var(--ink);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.gt{font-family:var(--font);font-weight:800;font-size:15px}
+.gt.a{fill:var(--cO)} .gt.d{fill:var(--cA)} .gt.h{fill:var(--cB)} .gt.m{fill:var(--mute)}
+.gd{fill:var(--ink)} .gd.a{fill:var(--cA)}
+.home{align-self:flex-start;margin-bottom:-24px;font:600 14px/1 var(--font);padding:9px 14px;border-radius:14px;border:1.5px solid var(--rule);background:var(--panel);color:var(--ink);text-decoration:none;position:relative;transition:opacity 2s,border-color .3s}
+.home:hover{border-color:var(--mute)}
+.home:focus-visible{outline:3px solid var(--cB);outline-offset:2px}
+body.focusing .home{opacity:.4;transition-duration:.9s}
+.note{max-width:62ch;margin:0 auto;text-align:center;font-size:13px;line-height:1.6;color:var(--mute)}
+.note p{margin:0}
+.mg{font:800 64px/1 var(--font)}
+.mf2{display:inline-flex;flex-direction:column;align-items:center;font-size:30px;line-height:1.05}
+.mf2>span:first-child{border-bottom:3px solid currentColor;padding:0 4px 2px}
+.mf2>span:last-child{padding-top:2px}
+@media (max-width:640px){.mg{font-size:44px}.mf2{font-size:22px}}
+.cn{stroke:var(--mute);stroke-width:1.6;stroke-linecap:round}
+.cn.cF{stroke:var(--cF)} .cn.cB{stroke:var(--cB)}
+.bl.cF{stroke:var(--cF)}
+.lg .fb2{stroke:var(--ink);stroke-width:1.6}
+.sgn{fill:none;stroke:var(--ink);stroke-linecap:round}
+.glyph.mg{color:var(--ink)}
+.card .exs button{gap:6px}
+.sgn.cO{stroke:var(--cO)} .sgn.cA{stroke:var(--cA)} .sgn.cB{stroke:var(--cB)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="dimmer" aria-hidden="true"></div>
+  <a class="home" href="index.html" lang="sv">← Tillbaks till menyn</a>
+  <header class="top">
+    <div class="titles"><h1 lang="en">Wordless explanations</h1><p class="by" lang="en">by Niklas Jonsson Kaino</p></div>
+    <div class="legend" aria-hidden="true">
+      <svg class="lg" viewBox="0 0 330 64">
+        <text class="tA" x="22" y="37" text-anchor="middle" style="font-size:20px">1</text>
+        <g transform="translate(50 31) scale(.85)" class="lsg" data-sign="%"></g>
+        <text class="t" x="80" y="37" text-anchor="middle" style="font-size:20px">=</text>
+        <text class="tA" x="114" y="22" text-anchor="middle" style="font-size:20px">1</text>
+        <line class="fb2" x1="96" y1="31" x2="132" y2="31"/>
+        <text class="tB" x="114" y="54" text-anchor="middle" style="font-size:20px">100</text>
+        <text class="tA" x="192" y="37" text-anchor="middle" style="font-size:20px">1</text>
+        <g transform="translate(222 31) scale(.85)" class="lsg" data-sign="‰"></g>
+        <text class="t" x="250" y="37" text-anchor="middle" style="font-size:20px">=</text>
+        <text class="tA" x="290" y="22" text-anchor="middle" style="font-size:20px">1</text>
+        <line class="fb2" x1="266" y1="31" x2="314" y2="31"/>
+        <text class="tB" x="290" y="54" text-anchor="middle" style="font-size:20px">1000</text>
+      </svg>
+    </div>
+    <div class="dmbox"><span class="q" aria-hidden="true">?</span><div>
+      <button data-dm="," aria-pressed="true">0,5</button><button data-dm="." aria-pressed="false">0.5</button></div></div>
+  </header>
+
+  <section class="sec" id="sec1">
+    <div class="glyph mg" aria-hidden="true" data-sign="%"></div>
+    <div class="card">
+      <svg class="stage" id="st1" viewBox="0 0 720 320" role="img" aria-label="1 % = 1/100"><g class="meas" opacity="0"></g><g class="layer"></g></svg>
+      <div class="bar"><div class="exs" id="ex1"></div>
+        <button class="pp replay" id="pp1" aria-label="pause" aria-pressed="false" hidden>❚❚</button>
+        <button class="replay" id="rp1" aria-label="replay" hidden>↻</button></div>
+    </div>
+  </section>
+
+  <section class="sec" id="sec2">
+    <div class="glyph mg" aria-hidden="true"><span class="mf2"><span>?</span><span>100</span></span></div>
+    <div class="card">
+      <svg class="stage" id="st2" viewBox="0 0 720 500" role="img" aria-label="?/100"><g class="meas" opacity="0"></g><g class="layer"></g></svg>
+      <div class="bar"><div class="exs" id="ex2"></div>
+        <button class="pp replay" id="pp2" aria-label="pause" aria-pressed="false" hidden>❚❚</button>
+        <button class="replay" id="rp2" aria-label="replay" hidden>↻</button></div>
+    </div>
+  </section>
+
+  <section class="sec" id="sec3">
+    <div class="glyph mg" aria-hidden="true" data-sign="‰"></div>
+    <div class="card">
+      <svg class="stage" id="st3" viewBox="0 0 720 320" role="img" aria-label="1 ‰ = 1/1000"><g class="meas" opacity="0"></g><g class="layer"></g></svg>
+      <div class="bar"><div class="exs" id="ex3"></div>
+        <button class="pp replay" id="pp3" aria-label="pause" aria-pressed="false" hidden>❚❚</button>
+        <button class="replay" id="rp3" aria-label="replay" hidden>↻</button></div>
+    </div>
+  </section>
+
+  <section class="sec" id="sec4">
+    <div class="glyph mg" aria-hidden="true"><span class="mf2"><span>?</span><span>1000</span></span></div>
+    <div class="card">
+      <svg class="stage" id="st4" viewBox="0 0 720 500" role="img" aria-label="?/1000"><g class="meas" opacity="0"></g><g class="layer"></g></svg>
+      <div class="bar"><div class="exs" id="ex4"></div>
+        <button class="pp replay" id="pp4" aria-label="pause" aria-pressed="false" hidden>❚❚</button>
+        <button class="replay" id="rp4" aria-label="replay" hidden>↻</button></div>
+    </div>
+  </section>
+
+  <section class="sec" id="sec5">
+    <div class="glyph" aria-hidden="true">
+      <svg viewBox="0 0 80 72"><path class="gl" d="M40 3 L77 68 L3 68 Z"/><line class="gl" x1="23" y1="40" x2="57" y2="40"/>
+        <text class="gt d" x="40" y="32" text-anchor="middle">D</text>
+        <text class="gt a" x="22" y="62" text-anchor="middle">A</text><circle class="gd" cx="40" cy="57" r="2.4"/>
+        <text class="gt h" x="58" y="62" text-anchor="middle">H</text></svg>
+    </div>
+    <div class="card">
+      <svg class="stage" id="st5" viewBox="0 0 720 470" role="img" aria-label="Del = Andel · Hel"><g class="meas" opacity="0"></g><g class="layer"></g></svg>
+      <div class="bar">
+        <div class="meth">
+          <button data-m="f" aria-label="fraction" aria-pressed="true"><span class="mf"><span>1</span><span>4</span></span></button>
+          <button data-m="d" aria-label="decimal" aria-pressed="false"><span class="dlab">0,25</span></button>
+        </div>
+        <div class="exs" id="ex5"></div>
+        <button class="pp replay" id="pp5" aria-label="pause" aria-pressed="false" hidden>❚❚</button>
+        <button class="replay" id="rp5" aria-label="replay" hidden>↻</button></div>
+    </div>
+  </section>
+
+  <footer class="note" lang="en">
+    <p>The dot (·) is used for multiplication instead of the cross (×), so it can't be confused with the variable x.</p>
+    <p>The slash (/) is used for division instead of the obelus (÷), so it can't be confused with the plus sign (+).</p>
+  </footer>
+</div>
+
+<script>
+const RM=false;
+const NS='http://www.w3.org/2000/svg';
+let DM=',', METHOD='f';
+try{DM=localStorage.getItem('adh-dm')||','; METHOD=localStorage.getItem('adh-m')||'f';}catch(e){}
+// numbers are written with a comma in the code; shown with the chosen decimal mark
+const fmt=s=>String(s).replace(/(\d),(\d)/g,'$1'+DM+'$2');
+
+/* ---------- clock: one virtual time that stops while paused ---------- */
+let clock=0, last=null, paused=false;
+const STAGES=[];
+function frame(t){
+  if(last!==null && !paused) clock+=Math.min(t-last,100);
+  last=t;
+  for(const S of STAGES) for(const tw of S.tws.slice()){
+    const p=Math.min(1,Math.max(0,(clock-tw.t0)/tw.d));
+    tw.fn(tw.e(p));
+    if(p>=1){const i=S.tws.indexOf(tw); if(i>=0) S.tws.splice(i,1); tw.res();}
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+const io=p=>p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+const lin=p=>p;
+const all=a=>Promise.all(a);
+
+function mk(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;}
+function makeStage(id){
+  const svg=document.getElementById(id);
+  const S={svg,layer:svg.querySelector('.layer'),meas:svg.querySelector('.meas'),tws:[],mc:{}};
+  S.tween=(d,fn,e=io)=>new Promise(res=>S.tws.push({t0:clock,d:Math.max(1,d),fn,e,res}));
+  S.wait=d=>S.tween(d,()=>{},lin);
+  S.measure=(s,fs=26)=>{
+    const k=fs+'|'+s; if(S.mc[k]) return S.mc[k];
+    const t=mk('text',{class:'w',style:'font-size:'+fs+'px'},S.meas); t.textContent=s;
+    const w=t.getComputedTextLength(); t.remove();
+    return (S.mc[k]=w||s.length*fs*.62);
+  };
+  STAGES.push(S); return S;
+}
+
+/* ---------- drawing objects ---------- */
+class O{
+  constructor(S){this.S=S;this.g=mk('g',{},S.layer);this.x=0;this.y=0;this.s=1;this.r=0;this.o=0;this.w=0;this.h=0;this.cls='';}
+  ap(){
+    this.g.setAttribute('transform',`translate(${this.x.toFixed(2)} ${this.y.toFixed(2)}) rotate(${this.r.toFixed(2)}) scale(${this.s.toFixed(3)})`);
+    this.g.style.opacity=this.o;
+    if(this.ln){this.ln.setAttribute('x1',(-this.w/2).toFixed(2));this.ln.setAttribute('x2',(this.w/2).toFixed(2));}
+    return this;
+  }
+  kill(){this.g.remove();}
+}
+function word(S,str,cls,x,y,o=0,fs=26){
+  const ob=new O(S); ob.kind='w'; ob.str=String(str); ob.cls=cls||''; ob.fs=fs;
+  ob.t=mk('text',{'text-anchor':'middle',dy:'.35em',class:'w '+ob.cls,style:`font-size:${fs}px`,'data-rc':'w'},ob.g); ob.t.textContent=ob.str;
+  ob.w=S.measure(ob.str,fs); ob.h=fs*1.15; ob.x=x; ob.y=y; ob.o=o; return ob.ap();
+}
+function hbar(S,w,x,y,o=0){
+  const ob=new O(S); ob.kind='b'; ob.ln=mk('line',{class:'bl',y1:0,y2:0},ob.g);
+  ob.w=w; ob.h=6; ob.x=x; ob.y=y; ob.o=o; return ob.ap();
+}
+// a small stacked fraction that moves as one piece
+function fpic(S,a,b,cls,x,y,o=0,fs=24){
+  const ob=new O(S); ob.kind='f'; ob.str=a+'/'+b; ob.cls=cls||''; ob.fs=fs;
+  const bw=Math.max(S.measure(a,fs),S.measure(b,fs))+14;
+  for(const [s,yy] of [[a,-.92*fs],[b,fs]]){const t=mk('text',{'text-anchor':'middle',dy:'.35em',y:yy,class:'w '+ob.cls,style:`font-size:${fs}px`,'data-rc':'w'},ob.g);t.textContent=s;}
+  mk('line',{class:'bl fb',x1:-bw/2,x2:bw/2,y1:0,y2:0},ob.g);
+  ob.w=bw; ob.h=2.3*fs; ob.x=x; ob.y=y; ob.o=o; return ob.ap();
+}
+function dots(S,n,cols,gap,r,x,y,o=0,cls=''){
+  const ob=new O(S); ob.kind='d'; ob.str='dots'+n; ob.cls=cls; ob.cs=[];
+  const rows=Math.ceil(n/cols);
+  for(let i=0;i<n;i++){
+    const cx=(i%cols-(cols-1)/2)*gap, cy=(Math.floor(i/cols)-(rows-1)/2)*gap;
+    ob.cs.push(mk('circle',{cx,cy,r,class:'dt '+cls,'data-rc':'dt'},ob.g));
+  }
+  ob.w=(cols-1)*gap+2*r; ob.h=(rows-1)*gap+2*r; ob.x=x; ob.y=y; ob.o=o; return ob.ap();
+}
+function sector(cx,cy,R,a0,a1){
+  const P=a=>[cx+R*Math.cos(a),cy+R*Math.sin(a)];
+  const [x0,y0]=P(a0),[x1,y1]=P(a1);
+  return `M${cx} ${cy}L${x0.toFixed(2)} ${y0.toFixed(2)}A${R} ${R} 0 ${a1-a0>Math.PI?1:0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}Z`;
+}
+function pieInto(g,k,n,R,cx,cls){
+  mk('circle',{cx,cy:0,r:R,class:'pieb'},g);
+  const A=i=>-Math.PI/2+i*2*Math.PI/n;
+  for(let i=0;i<k;i++) mk('path',{d:sector(cx,0,R,A(i),A(i+1)),class:'pies '+cls,'data-rc':'pies'},g);
+  for(let i=0;i<n;i++) mk('line',{x1:cx,y1:0,x2:cx+R*Math.cos(A(i)),y2:R*Math.sin(A(i)),class:'piel'},g);
+  mk('circle',{cx,cy:0,r:R,class:'pieo'},g);
+}
+function pie(S,k,n,R,x,y,o=0,cls='cO'){
+  const ob=new O(S); ob.kind='p'; ob.str='pie'+k+'/'+n; ob.cls=cls;
+  pieInto(ob.g,k,n,R,0,cls); ob.w=ob.h=2*R; ob.x=x; ob.y=y; ob.o=o; return ob.ap();
+}
+// a circle with k of n parts shaded, and the fraction written next to it
+function pieFr(S,k,n,x,y,o=0){
+  const ob=new O(S); ob.kind='pf'; ob.str='pf'+k+'/'+n;
+  pieInto(ob.g,k,n,30,-34,'');
+  for(const [s,yy] of [[k,-22],[n,24]]){const t=mk('text',{'text-anchor':'middle',dy:'.35em',x:30,y:yy,class:'w',style:'font-size:24px','data-rc':'w'},ob.g);t.textContent=s;}
+  mk('line',{class:'bl',x1:18,x2:42,y1:0,y2:0},ob.g);
+  ob.w=124; ob.cx=-8; ob.h=64; ob.x=x; ob.y=y; ob.o=o; return ob.ap();
+}
+function calcObj(S,x,y){
+  const ob=new O(S); ob.kind='c';
+  mk('rect',{x:-75,y:-105,width:150,height:210,rx:16,class:'cbody'},ob.g);
+  mk('rect',{x:-63,y:-92,width:126,height:60,rx:7,class:'cdisp'},ob.g);
+  ob.ex=mk('text',{x:56,y:-70,'text-anchor':'end',class:'cexp'},ob.g);
+  for(let r=0;r<4;r++)for(let c=0;c<4;c++) mk('rect',{x:-58+c*30,y:-18+r*29,width:25,height:23,rx:5,class:'ckey'},ob.g);
+  ob.w=150; ob.h=210; ob.x=x; ob.y=y; ob.o=0; return ob.ap();
+}
+function clone(ob){
+  const c=new O(ob.S); c.g.remove(); c.g=ob.g.cloneNode(true); ob.S.layer.appendChild(c.g);
+  c.g.querySelectorAll('.hot').forEach(e=>e.classList.remove('hot'));
+  for(const k of ['kind','str','cls','fs','w','h','x','y','s','cx']) c[k]=ob[k];
+  c.r=0; c.o=0;
+  if(ob.ln) c.ln=c.g.querySelector('line.bl');
+  c.t=c.g.querySelector('text');
+  return c.ap();
+}
+function recolor(ob,cls){
+  ob.g.querySelectorAll('[data-rc]').forEach(e=>e.setAttribute('class',e.dataset.rc+(cls?' '+cls:'')));
+  ob.cls=cls;
+}
+function anim(ob,props,d=1200,e=io){
+  const from={}; for(const k in props) from[k]=ob[k];
+  return ob.S.tween(d,p=>{for(const k in props) ob[k]=from[k]+(props[k]-from[k])*p; ob.ap();},e);
+}
+// a gentle swell and a small tilt, then back
+function swell(ob,d=1100){
+  const s0=ob.s;
+  return ob.S.tween(d,p=>{const b=Math.sin(Math.PI*p);ob.s=s0*(1+.12*b);ob.r=4*Math.sin(4*Math.PI*p)*b;ob.ap();},lin).then(()=>{ob.s=s0;ob.r=0;ob.ap();});
+}
+function hot(ob,on){(ob.ln||ob.t).classList.toggle('hot',on);}
+function ring(ob){
+  const r=new O(ob.S); r.kind='r';
+  mk('rect',{class:'ring',x:-(ob.w/2+12)+(ob.cx||0),y:-(ob.h/2+8),width:ob.w+24,height:ob.h+16,rx:14},r.g);
+  r.x=ob.x; r.y=ob.y; r.o=0; return r.ap();
+}
+async function highlight(ob){
+  if(ob.kind==='b'||ob.str==='·'){hot(ob,true); await all([swell(ob,1000),ob.S.wait(1000)]); return null;}
+  const r=ring(ob); await all([anim(r,{o:1},600),swell(ob,1100)]); return r;
+}
+async function unhighlight(ob,r){
+  if(r){await anim(r,{o:0},500); r.kill();} else {hot(ob,false); await ob.S.wait(500);}
+}
+// a copy grows out of its original and glides to its place; if the place shows something else, the copy turns into it
+async function fly(src,dst){
+  const group=Array.isArray(dst), tgt=group?dst[0]:dst;
+  const c=clone(src); await anim(c,{o:1},450);
+  const same=!group && 'wbf'.includes(src.kind) && src.kind===tgt.kind && src.str===tgt.str && src.cls===tgt.cls;
+  const props={x:tgt.x,y:tgt.y};
+  if(same && src.fs && tgt.fs) props.s=tgt.fs/src.fs;
+  if(same && src.kind==='b') props.w=tgt.w;
+  await anim(c,props,1200);
+  if(same){tgt.o=1;tgt.ap();c.kill();}
+  else{await all([anim(c,{o:0},650),...(group?dst:[dst]).map(o=>anim(o,{o:1},650))]); c.kill();}
+}
+async function clearLayer(S){
+  const kids=[...S.layer.children];
+  if(kids.length) await S.tween(600,p=>kids.forEach(k=>k.style.opacity=Math.min(+(k.style.opacity||1),1-p)));
+  S.layer.innerHTML='';
+}
+
+
+const W=(w,c,k,fs)=>({w:String(w),c:c||'',k,fs});
+const E=k=>W('=','',k);
+const DOT=k=>W('·','',k);
+const SL=k=>W('/','',k,34);
+const F=(n,d,k)=>({n,d,k});
+const FP=(a,b,c,k)=>({fr:[String(a),String(b)],c,k});
+const PD=(n,cols,c,k)=>{const gap=cols>=n?12:11, r=cols>=n?4.5:4; return {pic:(S,x,y)=>dots(S,n,cols,gap,r,x,y,0,c), pw:(cols-1)*gap+2*r, k};};
+const PP=(a,b,k)=>({pic:(S,x,y)=>pie(S,a,b,17,x,y,0,'cO'), pw:34, k});
+const RED=(p,a,b,f,ca='',cb='')=>F([W(a,ca,p+'a'),W('/','',p+'s',30),W(f,'cF',p+'f')],[W(b,cb,p+'b'),W('/','',p+'t',30),W(f,'cF',p+'g')],p+'L');
+const redSteps=(p,sa,sb)=>[['fly',sa,p+'a'],['fly',sb,p+'b'],['show',[p+'L']],['wait',500],['show',[p+'s',p+'f',p+'t',p+'g']],['wait',1100]];
+
+let AUTO=0;
+function itemW(S,it,fs){
+  if(it.num!=null) return numW(S,it.num,fs);
+  if(it.sign) return SIGN[it.sign].w*fs/24;
+  if(it.n) return Math.max(inW(S,it.n,fs),inW(S,it.d,fs))+16;
+  if(it.fr) return Math.max(S.measure(it.fr[0],fs),S.measure(it.fr[1],fs))+14;
+  if(it.pic) return it.pw;
+  return Math.max(S.measure(fmt(it.w),it.fs||fs),it.mw?S.measure(it.mw,it.fs||fs):0);
+}
+function inW(S,l,fs){return l.reduce((a,t)=>a+itemW(S,t,fs),0)+6*(l.length-1);}
+function placeIn(S,l,cx,y,fs,K){
+  let x=cx-inW(S,l,fs)/2; const objs=[];
+  l.forEach(t=>{const w=itemW(S,t,fs); objs.push(place(S,t,x+w/2,y,fs,K)); x+=w+6;});
+  return objs;
+}
+function place(S,it,cx,y,fs,K){
+  const k=it.k||('_'+(AUTO++)); let ob;
+  if(it.n){
+    ob=hbar(S,itemW(S,it,fs)-4,cx,y,0);
+    const a=placeIn(S,it.n,cx,y-.92*fs,fs,K), b=placeIn(S,it.d,cx,y+fs,fs,K);
+    K[k+'*']=[ob,...a,...b];
+  }
+  else if(it.fr) ob=fpic(S,it.fr[0],it.fr[1],it.c||'',cx,y,0,fs);
+  else if(it.pic) ob=it.pic(S,cx,y);
+  else if(it.num!=null) ob=numObj(S,it.num,it.c||'',cx,y,0,fs);
+  else if(it.sign) ob=signObj(S,it.sign,cx,y,0,fs);
+  else ob=word(S,fmt(it.w),it.c||'',cx,y,0,it.fs||fs);
+  K[k]=ob; return ob;
+}
+function buildRow(S,items,x0,y,fs,K){
+  let x=x0;
+  items.forEach((it,i)=>{if(i) x+=14; const w=itemW(S,it,fs); place(S,it,x+w/2,y,fs,K); x+=w;});
+  return x;
+}
+// the value as a calculator shows it
+const cs=v=>String(+v.toFixed(9)).replace('.',',');
+
+
+/* --- calculator --- */
+async function calcStep(ctx,expr,res,dstKey,eqKey){
+  const {S,K}=ctx;
+  if(!ctx.C){ctx.C=calcObj(S,ctx.cx,ctx.cy); if(ctx.cs){ctx.C.s=ctx.cs; ctx.C.w*=ctx.cs; ctx.C.h*=ctx.cs; ctx.C.ap();} await anim(ctx.C,{o:1},800); await S.wait(300);}
+  const C=ctx.C;
+  if(ctx.CR){await anim(ctx.CR,{o:0},400); ctx.CR.kill(); ctx.CR=null;}
+  C.ex.textContent='';
+  const ring_=ring(C);
+  await all([anim(ring_,{o:1},700),swell(C,1100)]);
+  await S.wait(300);
+  for(const ch of fmt(expr)){C.ex.textContent+=ch; await S.wait(ch===' '?80:220);}
+  await S.wait(700);
+  const k_=C.s, rs=fmt(res), w=S.measure(rs,17*k_);
+  const r=word(S,rs,'',C.x+56*k_-w/2,C.y-48*k_,0,17*k_); ctx.CR=r;
+  await anim(r,{o:1},700); await S.wait(600);
+  await anim(ring_,{o:0},500); ring_.kill();
+  await S.wait(400);
+  if(eqKey) await anim(K[eqKey],{o:1},700);
+  await fly(r,K[dstKey]);
+  await S.wait(700);
+}
+
+// a copy of a/b glides to its place, then a and b trade places in arcs, one on each side of the bar
+async function flip(src,grp){
+  const S=src.S, fs=src.fs, [a,b]=src.str.split('/');
+  const top=word(S,a,src.cls,src.x,src.y-.92*fs,0,fs), bot=word(S,b,src.cls,src.x,src.y+fs,0,fs), bar=hbar(S,src.w-14,src.x,src.y,0);
+  const parts=[top,bot,bar];
+  await all(parts.map(o=>anim(o,{o:1},450)));
+  const tgt=grp[0], dx=tgt.x-src.x, dy=tgt.y-src.y;
+  await all([...parts.map(o=>anim(o,{x:o.x+dx,y:o.y+dy},1200)),anim(bar,{w:tgt.w},1200)]);
+  await S.wait(400);
+  const cx=tgt.x, yt=top.y, yb=bot.y, R=Math.max(top.w,bot.w)/2+16;
+  await S.tween(1500,p=>{
+    const sx=R*Math.sin(Math.PI*p);
+    top.x=cx+sx; top.y=yt+(yb-yt)*p; top.ap();
+    bot.x=cx-sx; bot.y=yb-(yb-yt)*p; bot.ap();
+  });
+  grp.forEach(o=>{o.o=1;o.ap();});
+  parts.forEach(o=>o.kill());
+}
+
+
+
+/* =====================================================================
+   PROCENT OCH PROMILLE
+   Orange = the number / del, blue = hundra, tusen / hel, green = per and the factor, purple = andel.
+   ===================================================================== */
+const UNITS={
+  p:{sign:'%',w:['pro','cent'],m:['per','hundra'],base:100,word:'procent',hops:2,round:3},
+  m:{sign:'‰',w:['pro','mille'],m:['per','tusen'],base:1000,word:'promille',hops:3,round:4},
+};
+const INTRO={p:['1','25','150','2,5'], m:['1','40','1200','0,8']};
+// st: the steps to 100 (1000), x = expand, r = reduce. Every example is then also done with the calculator.
+const CALC={
+  p:[{n:13,d:50,st:[['x',2]]},{n:36,d:300,st:[['r',3]]},{n:9,d:60,st:[['x',10],['r',6]]},{n:14,d:35,st:[['r',7],['x',20]]},
+     {n:45,d:120,st:[['x',10],['r',2],['r',6]]},{n:18,d:75,st:[['x',4],['r',3]]}],
+  m:[{n:3,d:500,st:[['x',2]]},{n:45,d:5000,st:[['r',5]]},{n:6,d:250,st:[['r',2],['x',8]]},{n:21,d:750,st:[['r',3],['x',4]]},
+     {n:7,d:160,st:[['x',100],['r',4],['r',4]]},{n:2,d:7,st:[['x',1000],['r',7]]}],
+};
+const X0=24, Y0=134, DY=88, FS=24;
+const numVal=t=>parseFloat(String(t).replace(',','.'));
+
+
+/* --- % and ‰ drawn as rings and a slash (the font has no ‰) --- */
+const SIGN={'%':{w:18,rings:[[-5,-5.5],[5,5.5]],sl:[-6.5,9,6.5,-9]}, '‰':{w:27,rings:[[-9,-5.5],[1.5,5.5],[9.5,5.5]],sl:[-10.5,9,2.5,-9]}};
+function signInto(g,sign,k){
+  const G=SIGN[sign];
+  G.rings.forEach(([x,y])=>mk('circle',{cx:x*k,cy:y*k,r:3.3*k,class:'sgn','data-rc':'sgn',style:`stroke-width:${2.3*k}px`},g));
+  const [a,b,c,d]=G.sl; mk('line',{x1:a*k,y1:b*k,x2:c*k,y2:d*k,class:'sgn','data-rc':'sgn',style:`stroke-width:${2.3*k}px`},g);
+}
+function signObj(S,sign,x,y,o=0,fs=24){
+  const ob=new O(S); ob.kind='sg'; ob.str=sign; ob.cls=''; ob.fs=fs;
+  signInto(ob.g,sign,fs/24); ob.w=SIGN[sign].w*fs/24; ob.h=fs*.9; ob.x=x; ob.y=y; ob.o=o; return ob.ap();
+}
+function signSVG(sign,px){
+  const G=SIGN[sign], k=px/24, W=(G.w+4)*k, H=24*k;
+  let s=`<svg width="${W.toFixed(1)}" height="${H.toFixed(1)}" viewBox="${(-W/2).toFixed(1)} ${(-H/2).toFixed(1)} ${W.toFixed(1)} ${H.toFixed(1)}" aria-hidden="true" style="display:inline-block;vertical-align:middle">`;
+  G.rings.forEach(([x,y])=>s+=`<circle cx="${x*k}" cy="${y*k}" r="${3.3*k}" fill="none" stroke="currentColor" stroke-width="${2.3*k}"/>`);
+  const [a,b,c,d]=G.sl; s+=`<line x1="${a*k}" y1="${b*k}" x2="${c*k}" y2="${d*k}" stroke="currentColor" stroke-width="${2.3*k}" stroke-linecap="round"/>`;
+  return s+'</svg>';
+}
+
+/* --- a number drawn one character per cell, spaced exactly like normal text, so its decimal mark can hop.
+   A hop: the mark arcs over the next digit while that digit slides into the mark's place. --- */
+const numCW=(S,fs)=>S.measure('0',fs);
+function numW(S,str,fs){return String(str).length*numCW(S,fs);}
+function numCell(ob,ch){const t=mk('text',{'text-anchor':'middle',dy:'.35em',class:'w '+ob.cls,style:`font-size:${ob.fs}px`,'data-rc':'w'},ob.g); t.textContent=ch===','?DM:ch; return {t,ch};}
+function numLayout(ob){ob.cs.forEach((c,i)=>{c.t.setAttribute('x',(ob.left+(c.pos!=null?c.pos:i)*ob.cw).toFixed(2)); c.t.setAttribute('y',(c.lift||0).toFixed(2));});}
+function numObj(S,str,cls,x,y,o=0,fs=24){
+  const ob=new O(S); ob.kind='n'; ob.str='#'+str; ob.cls=cls||''; ob.fs=fs; ob.cw=numCW(S,fs);
+  str=String(str); ob.cs=[...str].map(ch=>numCell(ob,ch));
+  // a whole number has its mark hidden at the end
+  if(!str.includes(',')){const c=numCell(ob,','); c.t.style.opacity=0; c.hid=true; ob.cs.push(c);}
+  ob.left=-(str.length-1)*ob.cw/2; ob.w=str.length*ob.cw; ob.h=fs*1.15;
+  numLayout(ob); ob.x=x; ob.y=y; ob.o=o; return ob.ap();
+}
+const markAt=ob=>ob.cs.findIndex(c=>c.ch===',');
+const fadeCell=(ob,c,show)=>ob.S.tween(600,p=>c.t.style.opacity=show?p:1-p);
+async function swapHop(ob,dir){
+  const S=ob.S; let i=markAt(ob), nd=null;
+  // past the end there is no digit: a zero is drawn there as the mark passes
+  if(dir>0 && i===ob.cs.length-1){nd=numCell(ob,'0'); nd.t.style.opacity=0; ob.cs.push(nd);}
+  if(dir<0 && i===0){nd=numCell(ob,'0'); nd.t.style.opacity=0; ob.cs.unshift(nd); ob.left-=ob.cw; i=1;}
+  numLayout(ob);
+  const j=i+dir, cm=ob.cs[i], dg=ob.cs[j];
+  await S.tween(900,p=>{cm.pos=i+dir*p; cm.lift=-18*Math.sin(Math.PI*p); dg.pos=j-dir*p; if(nd) nd.t.style.opacity=p; numLayout(ob);});
+  cm.pos=dg.pos=null; cm.lift=0; ob.cs[i]=dg; ob.cs[j]=cm; numLayout(ob);
+}
+// times 10 per hop: the mark moves right; a mark left at the end goes, zeros in front go and the number closes up
+async function hop(ob,n){
+  const S=ob.S;
+  for(let i=0;i<n;i++){await swapHop(ob,1); await S.wait(400);}
+  if(markAt(ob)===ob.cs.length-1){const c=ob.cs.pop(); await fadeCell(ob,c,false); c.t.remove();}
+  while(ob.cs.length>1 && ob.cs[0].ch==='0' && ob.cs[1].ch!==','){
+    const z=ob.cs[0]; await fadeCell(ob,z,false); z.t.remove(); ob.cs.shift(); ob.left+=ob.cw; numLayout(ob);
+    const l0=ob.left; await S.tween(700,p=>{ob.left=l0-ob.cw*p; numLayout(ob);});
+  }
+}
+// divided by 10 per hop: the mark (first shown at the end of a whole number) moves left, drawing zeros in front as it passes;
+// a zero goes before a mark at the front, and zeros at the very end of the decimals fade
+function leftZeros(k,n){let z=0; for(let i=0;i<n;i++){if(k===0){z++;k=1;} k--;} if(k===0) z++; return z;}
+async function hopLeft(ob,n){
+  const S=ob.S, m=ob.cs[markAt(ob)];
+  if(m.hid){await fadeCell(ob,m,true); m.hid=false; await S.wait(500);}
+  for(let i=0;i<n;i++){await swapHop(ob,-1); await S.wait(400);}
+  if(markAt(ob)===0){const z=numCell(ob,'0'); z.t.style.opacity=0; ob.cs.unshift(z); ob.left-=ob.cw; numLayout(ob); await fadeCell(ob,z,true); await S.wait(300);}
+  while(ob.cs.length-1>markAt(ob) && ob.cs[ob.cs.length-1].ch==='0'){const z=ob.cs.pop(); await fadeCell(ob,z,false); z.t.remove();}
+  if(markAt(ob)===ob.cs.length-1){const c=ob.cs.pop(); await fadeCell(ob,c,false); c.t.remove();}
+}
+function numText(ob){return ob.cs.filter(c=>!c.hid).map(c=>c.ch).join('');}
+// a hopping number is written normally again once it has settled (same cells, so nothing moves)
+async function settle(K,key){
+  const ob=K[key], S=ob.S, t=fmt(numText(ob)), ww=S.measure(t,ob.fs), x0=ob.x+ob.left-ob.cw/2;
+  const w=word(S,t,ob.cls,x0+ww/2,ob.y,0,ob.fs);
+  await all([anim(ob,{o:0},400),anim(w,{o:1},400)]); ob.kill(); K[key]=w;
+}
+
+/* --- small helpers --- */
+function box(objs){
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+  objs.forEach(o=>{x0=Math.min(x0,o.x-o.w/2);x1=Math.max(x1,o.x+o.w/2);y0=Math.min(y0,o.y-o.h/2);y1=Math.max(y1,o.y+o.h/2);});
+  return {S:objs[0].S,x:(x0+x1)/2,y:(y0+y1)/2,w:x1-x0,h:y1-y0};
+}
+// faded copies float from where a thing is written to where it acts, and become it
+async function ghostTo(srcs,dst){
+  const cs_=srcs.map(clone);
+  await all(cs_.map(c=>anim(c,{o:.5},450)));
+  await all(cs_.map(c=>anim(c,{x:dst.x,y:dst.y,s:.6},1300)));
+  await all([...cs_.map(c=>anim(c,{o:0},650)),anim(dst,{o:1},650)]);
+  cs_.forEach(c=>c.kill());
+}
+async function ident(S,ob,name,cls){
+  const r=ring(ob);
+  await all([anim(r,{o:1},600),swell(ob,1100)]);
+  recolor(ob,cls);
+  const L=word(S,name,cls,ob.x,ob.y+ob.h/2+16,0,16);
+  await anim(L,{o:1},800); await S.wait(500);
+  await anim(r,{o:0},500); r.kill(); await S.wait(600);
+}
+// a part of the word is ringed, a short line grows down from it, and its meaning is written there
+async function explain(S,src,str,cls){
+  const r=ring(src);
+  await all([anim(r,{o:1},600),swell(src,1100)]);
+  recolor(src,cls);
+  const ln=new O(S); ln.x=src.x; ln.y=src.y; ln.o=1;
+  const l=mk('line',{x1:0,x2:0,y1:26,y2:26,class:'cn '+cls},ln.g); ln.ap();
+  await S.tween(700,p=>l.setAttribute('y2',(26+30*p).toFixed(2)));
+  const w=word(S,str,cls,src.x,src.y+76,0,24);
+  await anim(w,{o:1},800); await S.wait(500);
+  await anim(r,{o:0},500); r.kill(); await S.wait(500);
+  return w;
+}
+
+/* --- part 1 and 3: what the word means --- */
+async function runIntro(S,U,nstr){
+  await clearLayer(S);
+  const FB=34, Y1=62, Y2=244;
+  const ns=fmt(nstr), wN=S.measure(ns,FB), wP=S.measure(U.w[0],FB), wC=S.measure(U.w[1],FB), sp=S.measure('a',FB)*.8;
+  let x=360-(wN+sp+wP+wC)/2;
+  const N=word(S,ns,'cA',x+wN/2,Y1,0,FB); x+=wN+sp;
+  const Pw=word(S,U.w[0],'',x+wP/2,Y1,0,FB); x+=wP;
+  const Cw=word(S,U.w[1],'',x+wC/2,Y1,0,FB);
+  await all([N,Pw,Cw].map(o=>anim(o,{o:1},1000))); await S.wait(1200);
+  const per=await explain(S,Pw,U.m[0],'cF');
+  const hun=await explain(S,Cw,U.m[1],'cB');
+  await S.wait(900);
+
+  const K={};
+  const fin=cs(numVal(nstr)/U.base);
+  const items=[W(nstr,'cA','n'),{sign:U.sign,k:'s'},E('e'),F([W(nstr,'cA','fn')],[W(U.base,'cB','fd')],'fb'),E('e2'),W(fin,'','dv')];
+  const w2=items.reduce((a,it)=>a+itemW(S,it,FB),0)+14*(items.length-1);
+  buildRow(S,items,360-w2/2,Y2,FB,K);
+  K.fb.ln.classList.add('cF');
+  // the number comes down
+  await fly(N,K.n); await S.wait(600);
+  // the whole word becomes the sign
+  let r=ring(box([Pw,Cw])); await anim(r,{o:1},600); await S.wait(300);
+  await ghostTo([Pw,Cw],K.s);
+  await anim(r,{o:0},500); r.kill(); await S.wait(700);
+  await anim(K.e,{o:1},700); await S.wait(500);
+  await fly(K.n,K.fn); await S.wait(500);
+  // per becomes the fraction bar, hundra (tusen) becomes 100 (1000)
+  r=ring(per); await anim(r,{o:1},600);
+  await ghostTo([per],K.fb);
+  await anim(r,{o:0},500); r.kill(); await S.wait(500);
+  r=ring(hun); await anim(r,{o:1},600);
+  await ghostTo([hun],K.fd);
+  await anim(r,{o:0},500); r.kill(); await S.wait(700);
+  // and in decimal form: divide by 100 (1000), the decimal mark hops left
+  await anim(K.e2,{o:1},700); await S.wait(400);
+  const [ip]=String(nstr).split(',');
+  const num=numObj(S,nstr,'',K.dv.x,K.dv.y,0,FB);
+  num.left=-K.dv.w/2+num.cw/2+leftZeros(ip.length,U.hops)*num.cw; numLayout(num);
+  await fly(K.fn,num); await S.wait(500);
+  await swell(K.fd,1100);
+  await hopLeft(num,U.hops);
+  K.num=num; await settle(K,'num'); await S.wait(700);
+  await all(['n','s','e','fn','fb','fd','e2','num'].map(k=>swell(K[k],1300)));
+}
+
+/* --- part 2 and 4: how many percent (permille) is n of d --- */
+// a value as it is written: a value that does not end is cut after two decimals and rounded to one
+function fmtN(v){const t=cs(v), d=(t.split(',')[1]||''); return d.length>3?{t:t.slice(0,t.indexOf(',')+3)+'…',ap:cs(Math.round(v*10)/10)}:{t};}
+async function runCalc(S,U,ex){
+  await clearLayer(S);
+  const K={}, ctx={S,K,G:{}};
+  // the question
+  const words=['Hur','många',U.word,'är',String(ex.n),'av',String(ex.d),'?'];
+  const sp=S.measure('a',22), SW=[]; let x=X0;
+  words.forEach((w_,j)=>{if(j&&w_!=='?') x+=sp; const w=S.measure(w_,22); SW.push(word(S,w_,'',x+w/2,34,0,22)); x+=w;});
+  ctx.G={n:SW[4],d:SW[6],q:SW[2]};
+
+  // 1. with fractions: expand or reduce until the denominator is 100 (1000), one step at a time
+  const groups=[[W('Andel','cO','an'),E('e0'),F([W(ex.n,'cA','a')],[W(ex.d,'cB','b')],'fr')]];
+  const steps=[['show',['an','e0']],['fly','G:n','a'],['show',['fr']],['fly','G:d','b'],['wait',1100]];
+  let sn='a', sd='b', sq='fr', cn='cA', cd='cB', n=ex.n, nt=String(ex.n), d=ex.d;
+  ex.st.forEach(([op,f],i)=>{
+    const p='t'+i, sym=op==='x'?'·':'/', fz=op==='x'?24:30;
+    const nn=op==='x'?n*f:n/f, dd=op==='x'?d*f:d/f, N=fmtN(nn);
+    groups.push([E(p+'e'),F([W(nt,cn,p+'a'),W(sym,'',p+'s',fz),W(f,'cF',p+'f')],[W(d,cd,p+'b'),W(sym,'',p+'t',fz),W(f,'cF',p+'g')],p+'L'),E(p+'e2'),F([W(N.t,'',p+'n')],[W(cs(dd),'',p+'m')],p+'q')]);
+    steps.push(['show',[p+'e']],['fly',sn,p+'a'],['fly',sd,p+'b'],['show',[p+'L']],['wait',500],['show',[p+'s',p+'f',p+'t',p+'g']],['wait',1200],
+               ['show',[p+'e2']],['show',[p+'q*']],['wait',1000]);
+    // expanding first: the new denominator has as many zeros as 100 (1000)
+    if(op==='x' && i===0) steps.push(['zeros',p+'m',U.base],['wait',600]);
+    sn=p+'n'; sd=p+'m'; sq=p+'q'; cn=''; cd=''; n=nn; nt=N.t; d=dd;
+    if(N.ap){
+      groups.push([W('≈','',p+'ax'),F([W(N.ap,'',p+'an')],[W(cs(dd),'',p+'am')],p+'aq')]);
+      steps.push(['show',[p+'ax']],['show',[p+'aq*']],['wait',1000]);
+      sn=p+'an'; sd=p+'am'; sq=p+'aq'; n=numVal(N.ap); nt=N.ap;
+    }
+  });
+  groups.push([E('fe'),W(nt,'','pn'),{sign:U.sign,k:'ps'}]);
+  steps.push(['show',['fe']],['fly',sn,'pn'],['tosign',[sd,sq],'ps'],['wait',600],['wig',['pn','ps']],['wait',1500]);
+
+  // build the fraction working, in groups that wrap onto a new row when there is no room
+  let row=0, xr=X0, xeq=0;
+  groups.forEach((g,gi)=>{
+    const gw=g.reduce((a,it)=>a+itemW(S,it,FS),0)+14*(g.length-1);
+    if(gi>0){ if(xr+14+gw>700){row++; xr=xeq;} else xr+=14; }
+    xr=buildRow(S,g,xr,Y0+row*DY,FS,K);
+    if(gi===0) xeq=K.e0.x-K.e0.w/2;
+  });
+
+  // 2. with the calculator: the andel in decimal form, then the decimal mark moves two (three) places to the right
+  const v=ex.n/ex.d, full=cs(v), dec=(full.split(',')[1]||'');
+  const gB=[W('Andel','cO','an2'),E('g0'),F([W(ex.n,'cA','ga')],[W(ex.d,'cB','gb')],'gf'),E('g1'),W(full,'','gq')];
+  let use=full;
+  steps.push(['show',['an2','g0']],['fly','a','ga'],['show',['gf']],['fly','b','gb'],['wait',700],['calc',`${ex.n} / ${ex.d}`,full,'gq','g1']);
+  if(dec.length>=9){
+    use=cs(Math.round(v*10**U.round)/10**U.round);
+    gB.push(W('≈','','gx'),W(use,'','gr'));
+    steps.push(['show',['gx']],['show',['gr']],['wait',600]);
+  }
+  gB.push(E('g2'),{num:use,k:'gn'},{sign:U.sign,k:'gs'});
+  steps.push(['hidecalc'],['show',['g2']],['fly',dec.length>=9?'gr':'gq','gn'],['wait',500],['show',['gs']],['hop','gn',U.hops,'gs'],['wait',700],
+             ['wig',['gn','gs','pn','ps']]);
+  const yB=Y0+(row+1)*DY;
+  buildRow(S,gB,X0,yB,FS,K);
+  Object.assign(ctx,{cx:640,cy:yB+18,cs:.72});
+
+  await all(SW.map(o=>anim(o,{o:1},1000))); await S.wait(1100);
+  await ident(S,SW[4],'Del','cA'); await ident(S,SW[6],'Hel','cB');
+  await runSteps(ctx,steps);
+  // the answer belongs to the question
+  await S.wait(400);
+  await all([swell(SW[2],1300),swell(K.pn,1300),swell(K.ps,1300)]);
+}
+
+
+/* --- part 5: the part or the whole, found with the triangle --- */
+const EX5=[
+  {t:'del',u:'p',a:'20',h:450},
+  {t:'hel',u:'p',a:'30',d:12},
+  {t:'del',u:'p',a:'15',h:80},
+  {t:'del',u:'m',a:'4',h:2500},
+  {t:'hel',u:'p',a:'125',d:60},
+  {t:'hel',u:'m',a:'8',d:36},
+  {t:'del',u:'p',a:'2,5',h:640},
+  {t:'hel',u:'m',a:'15',d:6},
+];
+const DEF5={del:()=>[W('Del','cA','t'),E('e1'),W('Andel','cO','p0'),DOT('p1'),W('Hel','cB','p2')],
+            hel:()=>[W('Hel','cB','t'),E('e1'),F([W('Del','cA','p0')],[W('Andel','cO','p2')],'p1')]};
+const TLET5={del:'D',hel:'H'}, USE5={del:['A','dot','H'],hel:['D','bar','A']}, FADE5={del:['D','bar'],hel:['H','dot']};
+const SENT5={del:['Beräkna','delen','.'],hel:['Beräkna','det','hela','.']}, SENT5T={del:1,hel:2};
+const res5=ex=>{const av=numVal(ex.a), b=UNITS[ex.u].base; return ex.t==='del'?av*ex.h/b:ex.d*b/av;};
+// dividing by one digit, or by 10, 100, 1000, is done directly; anything else is reduced to res/1
+const simpleDiv=b=>b<10||/^10+$/.test(String(b));
+const nl=g=>{g.nl=true; return g;};
+// reduce one single-digit factor at a time (preferring one that leaves a simple divisor),
+// until the division is by one digit or by 10, 100, 1000; then divide directly
+function divide5(p,b,res,groups,steps){
+  let n=numVal(p), d=b, i=0, sn='v1', sd='v2';
+  const pick=()=>{for(const need of [true,false]) for(let c=9;c>=2;c--) if(d%c===0 && Number.isInteger(n/c) && (!need||simpleDiv(d/c))) return c; return 0;};
+  while(!simpleDiv(d)){
+    const f=pick(); if(!f) break;
+    const q='r'+i;
+    groups.push([E(q+'e'),RED(q,cs(n),cs(d),f),E(q+'e2'),F([W(cs(n/f),'',q+'n')],[W(cs(d/f),'',q+'m')],q+'q')]);
+    steps.push(['show',[q+'e']],...redSteps(q,sn,sd),['show',[q+'e2']],['show',[q+'q*']],['wait',1000]);
+    n/=f; d/=f; sn=q+'n'; sd=q+'m'; i++;
+  }
+  groups[groups.length-1].push(E('z4'),W(res,'','q'));
+  steps.push(['wig',[i?'r'+(i-1)+'q*':'vL*']],['show',['z4']],['show',['q']],['wig',['q']]);
+}
+function work5(ex,U,groups,steps){
+  const base=U.base, a=ex.a, av=numVal(a), dec=cs(av/base), res=cs(res5(ex));
+  if(ex.t==='del'){
+    const h=ex.h;
+    groups.push([W('Del','cA','c0'),E('ce'),W(a,'cO','wa'),{sign:U.sign,k:'ws'},DOT('w1'),W(h,'cB','wh')]);
+    steps.push(['flyc'],['flyh','G:A','wa','p0'],['fly','G:As','ws'],['showh',['w1'],'p1'],['flyh','G:H','wh','p2'],['wait',1000]);
+    if(METHOD==='f'){
+      // % is /100 (‰ is /1000), the whole number gets /1, then multiply across
+      const p=cs(av*h);
+      groups.push([E('f0'),F([W(a,'cO','fa')],[W(base,'cO','fb')],'fl'),DOT('f1'),F([W(h,'cB','m4')],[W('1','cF','m5')],'mH')]);
+      steps.push(['show',['f0']],['fly','wa','fa'],['ghostg','ws','fl'],['show',['f1']],['fly','wh','m4'],['show',['mH']],['show',['m5']],['wait',1100]);
+      groups.push([E('u0'),F([W(a,'','u1'),W('·','','u2'),W(h,'','u3')],[W(base,'','u4'),W('·','','u5'),W('1','','u6')],'uL'),E('v0'),F([W(p,'','v1')],[W(base,'','v2')],'vL')]);
+      steps.push(['show',['u0','uL']],['fly','fa','u1'],['show',['u2']],['fly','m4','u3'],['wait',400],['fly','fb','u4'],['show',['u5']],['fly','m5','u6'],['wait',1000],
+                 ['show',['v0','vL']],['show',['v1']],['show',['v2']],['wait',1000]);
+      divide5(p,base,res,groups,steps);
+    }else{
+      // % means divide by 100: the mark hops left; then the calculator
+      groups.push(nl([E('d0'),W(dec,'','dv'),DOT('d1'),W(h,'cB','d2'),E('d3'),W(res,'','q')]));
+      steps.push(['show',['d0']],['dechop','wa','dv','ws',U.hops],['wait',600],['show',['d1']],['fly','wh','d2'],['wait',600],['calc',`${dec} · ${h}`,res,'q','d3'],['wig',['q']]);
+    }
+  }else{
+    const d=ex.d;
+    groups.push([W('Hel','cB','c0'),E('ce'),W(d,'cA','wd'),SL('w1'),W(a,'cO','wa'),{sign:U.sign,k:'ws'}]);
+    steps.push(['flyc'],['flyh','G:D','wd','p0'],['showh',['w1'],'p1'],['flyh','G:A','wa','p2'],['fly','G:As','ws'],['wait',1000]);
+    if(METHOD==='f'){
+      // % is /100; keep, change, flip; multiply across
+      const p=cs(d*base);
+      groups.push([E('f0'),W(d,'cA','fd'),SL('f1'),F([W(a,'cO','fa')],[W(base,'cO','fb')],'fl')]);
+      steps.push(['show',['f0']],['fly','wd','fd'],['fly','w1','f1'],['fly','wa','fa'],['ghostg','ws','fl'],['wait',1000]);
+      groups.push([E('m0'),F([W(d,'cA','m1')],[W('1','cF','m2')],'mD'),W('·','cF','m3'),F([W(base,'cO','m4')],[W(a,'cO','m5')],'mA')]);
+      steps.push(['show',['m0']],['fly','fd','m1'],['show',['mD']],['show',['m2']],['wait',600],['fly','f1','m3'],['flip2','fl','mA'],['wait',1100]);
+      groups.push([E('u0'),F([W(d,'','u1'),W('·','','u2'),W(base,'','u3')],[W('1','','u4'),W('·','','u5'),W(a,'','u6')],'uL'),E('v0'),F([W(p,'','v1')],[W(a,'','v2')],'vL')]);
+      steps.push(['show',['u0','uL']],['fly','m1','u1'],['show',['u2']],['fly','m4','u3'],['wait',400],['fly','m2','u4'],['show',['u5']],['fly','m5','u6'],['wait',1000],
+                 ['show',['v0','vL']],['show',['v1']],['show',['v2']],['wait',1000]);
+      divide5(p,av,res,groups,steps);
+    }else{
+      groups.push(nl([E('d0'),W(d,'cA','d1'),SL('d2'),W(dec,'','dv'),E('d3'),W(res,'','q')]));
+      steps.push(['show',['d0']],['fly','wd','d1'],['fly','w1','d2'],['dechop','wa','dv','ws',U.hops],['wait',600],['calc',`${d} / ${dec}`,res,'q','d3'],['wig',['q']]);
+    }
+  }
+}
+async function identBox(S,objs,name,cls){
+  const b=box(objs), r=ring(b);
+  await all([anim(r,{o:1},600),...objs.map(o=>swell(o,1100))]);
+  objs.forEach(o=>recolor(o,cls));
+  const L=word(S,name,cls,b.x,b.y+b.h/2+16,0,16);
+  await anim(L,{o:1},800); await S.wait(500);
+  await anim(r,{o:0},500); r.kill(); await S.wait(600);
+}
+async function runPart5(S,ex){
+  const U=UNITS[ex.u], t=ex.t, K={}, G={}, ctx={S,K,G,cx:640,cy:332,cs:.72};
+  await clearLayer(S);
+  // the small triangle and the task
+  const tri=mk('path',{class:'tri',d:'M588 104 L640 16 L692 104 Z'},S.layer); tri.style.opacity=0;
+  const T={D:word(S,'D','cA',640,52,0,18), bar:hbar(S,46,640,69,0), A:word(S,'A','cO',614,89,0,18), dot:word(S,'·','',640,89,0,18), H:word(S,'H','cB',666,89,0,18)};
+  const words=SENT5[t], sp=S.measure('a',22); let x=X0; const SW=[];
+  words.forEach((w_,j)=>{if(j&&w_!=='.') x+=sp; const w=S.measure(w_,22); SW.push(word(S,w_,'',x+w/2,36,0,22)); x+=w;});
+  // the given line
+  const items=t==='del'?[W(ex.a,'','A'),{sign:U.sign,k:'As'},W('av'),W(ex.h,'','H')]
+                       :[W(ex.a,'','A'),{sign:U.sign,k:'As'},W('av'),Object.assign(W('?','','Q'),{mw:cs(res5(ex))}),W('='),W(ex.d,'','D')];
+  const GK={}; buildRow(S,items,X0,104,FS,GK);
+  for(const k in GK) if(!k.endsWith('*')) G[k]=GK[k];
+  // the definition, on its own row under the triangle
+  const def=DEF5[t](), dw=def.reduce((a,it)=>a+itemW(S,it,FS),0)+14*(def.length-1);
+  buildRow(S,def,700-dw,160,FS,K);
+  // the working, in groups that wrap
+  const groups=[], steps=[]; work5(ex,U,groups,steps);
+  let row=0, xr=X0, xeq=0;
+  groups.forEach((g,gi)=>{
+    const gw=g.reduce((a,it)=>a+itemW(S,it,FS),0)+14*(g.length-1);
+    if(gi>0){ if(g.nl||xr+14+gw>700){row++; xr=xeq;} else xr+=14; }
+    xr=buildRow(S,g,xr,238+row*84,FS,K);
+    if(gi===0) xeq=K.ce.x-K.ce.w/2;
+  });
+
+  await all([S.tween(1000,p=>tri.style.opacity=p),...Object.values(T).map(o=>anim(o,{o:1},1000)),...SW.map(o=>anim(o,{o:1},1000))]);
+  await S.wait(900);
+  await all(Object.values(G).map(o=>anim(o,{o:1},900))); await S.wait(1100);
+  // name the parts of the given
+  await identBox(S,[G.A,G.As],'Andel','cO');
+  if(t==='del') await identBox(S,[G.H],'Hel','cB');
+  else{await identBox(S,[G.D],'Del','cA'); await identBox(S,[G.Q],'Hel','cB');}
+  // the word in the task starts the definition; a faded copy goes to its letter in the triangle, which fades
+  const tw=SW[SENT5T[t]];
+  let r=ring(tw); await all([anim(r,{o:1},600),swell(tw,1100)]);
+  await fly(tw,K.t); await anim(r,{o:0},500); r.kill(); await S.wait(700);
+  const L=TLET5[t], gh=clone(K.t);
+  await anim(gh,{o:.45},500);
+  await anim(gh,{x:T[L].x,y:T[L].y,s:.75},1300);
+  await all([anim(gh,{o:0},900),...FADE5[t].map(f=>anim(T[f],{o:.2},1000))]); gh.kill();
+  await S.wait(700);
+  await anim(K.e1,{o:1},700); await S.wait(500);
+  for(let j=0;j<3;j++){
+    const src=T[USE5[t][j]];
+    r=await highlight(src); await fly(src,K['p'+j]); await unhighlight(src,r); await S.wait(500);
+  }
+  await S.wait(900);
+  await runSteps(ctx,steps);
+  if(t==='hel'){
+    // the answer takes the place of the question mark
+    await S.wait(600);
+    const c=clone(K.q); await anim(c,{o:1},450);
+    await anim(c,{x:G.Q.x,y:G.Q.y},1300);
+    await anim(G.Q,{o:0},600);
+    recolor(c,'cB'); await swell(c,1300);
+  }
+}
+// a copy of a/b glides to its place, then a and b trade places in arcs, one on each side of the bar
+async function flip2(src,dst){
+  const [sb,st,sd]=src, S=sb.S;
+  const parts=[clone(sb),clone(st),clone(sd)], [bar,top,bot]=parts;
+  await all(parts.map(o=>anim(o,{o:1},450)));
+  const tgt=dst[0], dx=tgt.x-sb.x, dy=tgt.y-sb.y;
+  await all([...parts.map(o=>anim(o,{x:o.x+dx,y:o.y+dy},1200)),anim(bar,{w:tgt.w},1200)]);
+  await S.wait(400);
+  const cx=tgt.x, yt=top.y, yb=bot.y, R=Math.max(top.w,bot.w)/2+16;
+  await S.tween(1500,p=>{const sx=R*Math.sin(Math.PI*p); top.x=cx+sx; top.y=yt+(yb-yt)*p; top.ap(); bot.x=cx-sx; bot.y=yb-(yb-yt)*p; bot.ap();});
+  dst.forEach(o=>{o.o=1;o.ap();});
+  parts.forEach(o=>o.kill());
+}
+
+async function runSteps(ctx,steps){
+  const {S,K,G}=ctx;
+  const ref=s=>s.startsWith('G:')?G[s.slice(2)]:K[s];
+  const keys=l=>l.flatMap(k=>k.endsWith('*')?K[k]:[K[k]]);
+  for(const [op,a,b,c,d] of steps){
+    if(op==='show') await all(keys(a).map(o=>anim(o,{o:1},b||900)));
+    else if(op==='fly') await fly(ref(a),K[b]);
+    else if(op==='wait') await S.wait(a);
+    else if(op==='wig') await all(keys(a).map(o=>swell(o,1300)));
+    else if(op==='calc') await calcStep(ctx,a,b,c,d);
+    else if(op==='hidecalc'){ if(ctx.C){await all([anim(ctx.C,{o:0},700),ctx.CR?anim(ctx.CR,{o:0},700):null]); ctx.C.kill(); if(ctx.CR) ctx.CR.kill(); ctx.C=ctx.CR=null;} }
+    else if(op==='hop'){ await swell(K[c],1100); await hop(K[a],b); await settle(K,a);
+      const w=K[a]; await anim(K[c],{x:w.x+w.w/2+12+K[c].w/2},800); }
+    else if(op==='zeros'){
+      // the zeros at the end of the denominator are ringed, and so are the zeros of 100 (1000) written under it
+      const D=K[a], nz=String(b).length-1, cw=S.measure('0',D.fs);
+      const ref=word(S,String(b),'cF',0,D.y+36,0,20); ref.x=D.x+D.w/2-ref.w/2; ref.ap();
+      const cw2=S.measure('0',20);
+      const zr=(ob,c,h)=>{const r=new O(S); mk('rect',{class:'ring',x:-nz*c-3,y:-h/2,width:nz*c+6,height:h,rx:7},r.g); r.x=ob.x+ob.w/2; r.y=ob.y; r.o=0; return r.ap();};
+      const r1=zr(D,cw,D.fs*1.15);
+      await all([anim(r1,{o:1},600),swell(D,1000)]);
+      await anim(ref,{o:1},700);
+      const r2=zr(ref,cw2,24); await anim(r2,{o:1},600);
+      await S.wait(1800);
+      await all([r1,r2,ref].map(o=>anim(o,{o:0},700))); [r1,r2,ref].forEach(o=>o.kill());
+    }
+    else if(op==='flyc'){ const r=await highlight(K.t); await fly(K.t,K.c0); await unhighlight(K.t,r); await anim(K.ce,{o:1},700); await S.wait(600); }
+    else if(op==='flyh'){ const r=await highlight(K[c]); await fly(ref(a),K[b]); await unhighlight(K[c],r); }
+    else if(op==='showh'){ const r=await highlight(K[b]); await all(keys(a).map(o=>anim(o,{o:1},900))); await unhighlight(K[b],r); }
+    else if(op==='flip2') await flip2(K[a+'*'],K[b+'*']);
+    else if(op==='ghostg'){
+      // the sign is ringed, and faded copies of it become the fraction bar and 100 (1000)
+      const src=K[a], dst=K[b+'*'].filter(o=>o!==K['fa']), r=ring(src);
+      await anim(r,{o:1},600);
+      const g=clone(src); await anim(g,{o:.5},450);
+      await anim(g,{x:K[b].x,y:K[b].y+12,s:.8},1300);
+      await all([anim(g,{o:0},650),...dst.map(o=>anim(o,{o:1},650))]); g.kill();
+      await anim(r,{o:0},500); r.kill(); await S.wait(500);
+    }
+    else if(op==='dechop'){
+      // the number is copied, the sign (dividing by 100 or 1000) swells, and the mark hops left
+      const slot=K[b], src=K[a], [ip]=String(src.str).replace(DM,',').split(',');
+      const num=numObj(S,String(src.str).replace(DM,','),'',slot.x,slot.y,0,slot.fs);
+      num.left=-slot.w/2+num.cw/2+leftZeros(ip.length,d)*num.cw; numLayout(num);
+      await fly(src,num); await S.wait(400);
+      await swell(K[c],1100);
+      await hopLeft(num,d);
+      K[b+'n']=num; await settle(K,b+'n'); K[b]=K[b+'n'];
+    }
+    else if(op==='tosign'){
+      const objs=keys(a), r=ring(box(objs));
+      await anim(r,{o:1},600); await S.wait(300);
+      await ghostTo(objs,K[b]);
+      await anim(r,{o:0},500); r.kill();
+    }
+  }
+}
+
+/* =====================================================================
+   running, pausing, spotlight
+   ===================================================================== */
+const S1=makeStage('st1'), S2=makeStage('st2'), S3=makeStage('st3'), S4=makeStage('st4'), S5=makeStage('st5');
+let RUN=0, running=false;
+const pps=[1,2,3,4,5].map(n=>document.getElementById('pp'+n));
+function setPaused(v){paused=v;pps.forEach(pp=>{pp.setAttribute('aria-pressed',v);pp.textContent=v?'▶':'❚❚';pp.setAttribute('aria-label',v?'play':'pause');});}
+let liftTimer=null;
+function focusOn(sec,on){
+  clearTimeout(liftTimer);
+  if(on){
+    document.querySelectorAll('.sec').forEach(s=>s.classList.toggle('active',s===sec));
+    document.body.classList.add('focusing');
+  }else{
+    // the card keeps its place above the dimmer until the dimmer has faded away
+    document.body.classList.remove('focusing');
+    liftTimer=setTimeout(()=>sec.classList.remove('active'),2200);
+  }
+}
+async function go(n,job){
+  const id=++RUN; STAGES.forEach(S=>S.tws=[]); running=true;
+  setPaused(false);
+  const sec=document.getElementById('sec'+n);
+  document.getElementById('pp'+n).hidden=false; document.getElementById('rp'+n).hidden=false;
+  focusOn(sec,true);
+  await document.fonts.ready;
+  if(id!==RUN) return false;
+  await job();
+  if(id!==RUN) return false;
+  running=false;
+  setTimeout(()=>{if(id===RUN&&!running) focusOn(sec,false);},1300);
+  return true;
+}
+const lastJob={};
+function addButtons(n,list,label,job){
+  const box_=document.getElementById('ex'+n);
+  list.forEach((it,i)=>{
+    const b=document.createElement('button'); b.dataset.i=i; b.innerHTML=label(it); box_.appendChild(b);
+    b.addEventListener('click',()=>{
+      box_.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+      lastJob[n]=()=>job(it); go(n,lastJob[n]);
+    });
+  });
+  document.getElementById('rp'+n).addEventListener('click',()=>{if(lastJob[n]) go(n,lastJob[n]);});
+}
+// a small triangle on each part-5 button, with the letter that is found lit up
+function miniTri(t){
+  const c=l=>({del:'D',hel:'H'})[t]===l?({D:'d',H:'h'})[l]:'m';
+  return `<svg width="26" height="23" viewBox="0 0 80 72" aria-hidden="true" style="flex:none"><path class="gl" d="M40 3 L77 68 L3 68 Z"/><line class="gl" x1="23" y1="40" x2="57" y2="40"/>
+    <text class="gt ${c('D')}" x="40" y="32" text-anchor="middle">D</text><text class="gt m" x="22" y="62" text-anchor="middle">A</text>
+    <circle class="gd" cx="40" cy="57" r="2.4"/><text class="gt ${c('H')}" x="58" y="62" text-anchor="middle">H</text></svg>`;
+}
+function drawButtons(){
+  [1,2,3,4,5].forEach(n=>document.getElementById('ex'+n).innerHTML='');
+  addButtons(1,INTRO.p,s=>`<span class="kA">${fmt(s)}</span>${signSVG('%',17)}`,s=>runIntro(S1,UNITS.p,s));
+  addButtons(2,CALC.p,e=>`<span class="kA">${e.n}</span><span>av</span><span class="kB">${e.d}</span>`,e=>runCalc(S2,UNITS.p,e));
+  addButtons(3,INTRO.m,s=>`<span class="kA">${fmt(s)}</span>${signSVG('‰',17)}`,s=>runIntro(S3,UNITS.m,s));
+  addButtons(4,CALC.m,e=>`<span class="kA">${e.n}</span><span>av</span><span class="kB">${e.d}</span>`,e=>runCalc(S4,UNITS.m,e));
+  addButtons(5,EX5,e=>miniTri(e.t)+`<span class="kO">${fmt(e.a)}</span>${signSVG(e.u==='p'?'%':'‰',15)}<span>av</span>`+
+    (e.t==='del'?`<span class="kB">${e.h}</span>`:`<span class="kB">?</span><span>=</span><span class="kA">${e.d}</span>`),e=>runPart5(S5,e));
+}
+document.querySelectorAll('.glyph[data-sign]').forEach(e=>e.innerHTML=signSVG(e.dataset.sign,60));
+document.querySelectorAll('.lsg').forEach(g=>signInto(g,g.dataset.sign,1));
+const mbtns=[...document.querySelectorAll('#sec5 .meth button')];
+function setMethod(m){
+  METHOD=m; try{localStorage.setItem('adh-m',m);}catch(e){}
+  mbtns.forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===m));
+}
+mbtns.forEach(b=>b.addEventListener('click',()=>{setMethod(b.dataset.m); if(lastJob[5]) go(5,lastJob[5]);}));
+setMethod(METHOD);
+// decimal mark
+const dmb=[...document.querySelectorAll('.dmbox button')];
+function setDM(m){
+  DM=m; try{localStorage.setItem('adh-dm',m);}catch(e){}
+  dmb.forEach(b=>b.setAttribute('aria-pressed',b.dataset.dm===m));
+  drawButtons();
+  document.querySelector('#sec5 .dlab').textContent=fmt('0,25');
+}
+dmb.forEach(b=>b.addEventListener('click',()=>setDM(b.dataset.dm)));
+setDM(DM);
+
+pps.forEach(pp=>pp.addEventListener('click',()=>{if(running) setPaused(!paused);}));
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space' && running && !(e.target instanceof HTMLButtonElement)){e.preventDefault();setPaused(!paused);}
+});
+</script>
+</body>
+</html>
