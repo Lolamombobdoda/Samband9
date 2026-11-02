@@ -527,12 +527,14 @@ function numObj(S,str,cls,x,y,o=0,fs=24){
   numLayout(ob); ob.x=x; ob.y=y; ob.o=o; return ob.ap();
 }
 const markAt=ob=>ob.cs.findIndex(c=>c.ch===',');
+// a zero is written in front: the digits slide right one place to make room, the zero fades in
+async function frontZero(ob){const z=numCell(ob,'0'); z.t.style.opacity=0; ob.cs.unshift(z); const l0=ob.left-ob.cw; await ob.S.tween(700,p=>{ob.left=l0+ob.cw*p; z.t.style.opacity=p; numLayout(ob);}); ob.left=l0+ob.cw; numLayout(ob); return z;}
 const fadeCell=(ob,c,show)=>ob.S.tween(600,p=>c.t.style.opacity=show?p:1-p);
 async function swapHop(ob,dir){
   const S=ob.S; let i=markAt(ob), nd=null;
   // past the end there is no digit: a zero is drawn there as the mark passes
   if(dir>0 && i===ob.cs.length-1){nd=numCell(ob,'0'); nd.t.style.opacity=0; ob.cs.push(nd);}
-  if(dir<0 && i===0){nd=numCell(ob,'0'); nd.t.style.opacity=0; ob.cs.unshift(nd); ob.left-=ob.cw; i=1;}
+  if(dir<0 && i===0){await frontZero(ob); i=1;}
   numLayout(ob);
   const j=i+dir, cm=ob.cs[i], dg=ob.cs[j];
   await S.tween(900,p=>{cm.pos=i+dir*p; cm.lift=-18*Math.sin(Math.PI*p); dg.pos=j-dir*p; if(nd) nd.t.style.opacity=p; numLayout(ob);});
@@ -555,7 +557,7 @@ async function hopLeft(ob,n){
   const S=ob.S, m=ob.cs[markAt(ob)];
   if(m.hid){await fadeCell(ob,m,true); m.hid=false; await S.wait(500);}
   for(let i=0;i<n;i++){await swapHop(ob,-1); await S.wait(400);}
-  if(markAt(ob)===0){const z=numCell(ob,'0'); z.t.style.opacity=0; ob.cs.unshift(z); ob.left-=ob.cw; numLayout(ob); await fadeCell(ob,z,true); await S.wait(300);}
+  if(markAt(ob)===0){await frontZero(ob); await S.wait(300);}
   while(ob.cs.length-1>markAt(ob) && ob.cs[ob.cs.length-1].ch==='0'){const z=ob.cs.pop(); await fadeCell(ob,z,false); z.t.remove();}
   if(markAt(ob)===ob.cs.length-1){const c=ob.cs.pop(); await fadeCell(ob,c,false); c.t.remove();}
 }
@@ -642,7 +644,7 @@ async function runIntro(S,U,nstr){
   await anim(K.e2,{o:1},700); await S.wait(400);
   const [ip]=String(nstr).split(',');
   const num=numObj(S,nstr,'',K.dv.x,K.dv.y,0,FB);
-  num.left=-K.dv.w/2+num.cw/2+leftZeros(ip.length,U.hops)*num.cw; numLayout(num);
+  num.left=-K.dv.w/2+num.cw/2; numLayout(num);
   await fly(K.fn,num); await S.wait(500);
   await swell(K.fd,1100);
   await hopLeft(num,U.hops);
@@ -917,7 +919,7 @@ async function runSteps(ctx,steps){
       // the number is copied, the sign (dividing by 100 or 1000) swells, and the mark hops left
       const slot=K[b], src=K[a], [ip]=String(src.str).replace(DM,',').split(',');
       const num=numObj(S,String(src.str).replace(DM,','),'',slot.x,slot.y,0,slot.fs);
-      num.left=-slot.w/2+num.cw/2+leftZeros(ip.length,d)*num.cw; numLayout(num);
+      num.left=-slot.w/2+num.cw/2; numLayout(num);
       await fly(src,num); await S.wait(400);
       await swell(K[c],1100);
       await hopLeft(num,d);
