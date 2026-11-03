@@ -57,6 +57,11 @@ svg.stage{display:block;width:100%;height:auto}
 .card button.on{border:2px solid var(--ink)}
 .card button:disabled{opacity:.3;filter:grayscale(1);cursor:not-allowed}
 .bar .replay{font-size:22px;padding:8px 14px;align-self:stretch;min-width:52px}
+.ctl{display:grid;grid-template-columns:auto auto;gap:8px;align-self:stretch}
+.ctl[hidden]{display:none}
+.ctl .replay{min-height:44px}
+.ctl .spd{font-size:15px;font-variant-numeric:tabular-nums;width:64px;padding-left:0;padding-right:0}
+.ctl .skip svg{width:22px;height:16px}
 .bar .pp[aria-pressed="true"]{border:2px solid var(--cF);color:var(--cF)}
 button:focus-visible{outline:3px solid var(--cB);outline-offset:2px}
 .kA{color:var(--cA)} .kB{color:var(--cB)} .kO{color:var(--cO)}
@@ -152,8 +157,12 @@ body.focusing .home{opacity:.4;transition-duration:.9s}
           <button data-k="forandring" class="kA" disabled>Förändring</button>
           <button data-k="start" class="kB" disabled>Start</button>
         </div>
-        <button class="pp replay" id="pp1" aria-label="pause" aria-pressed="false" hidden>❚❚</button>
-        <button class="replay" id="rp1" aria-label="replay" hidden>↻</button>
+        <div class="ctl" id="ctl1" hidden>
+          <button class="pp replay" id="pp1" aria-label="pause" aria-pressed="false">❚❚</button>
+          <button class="replay" id="rp1" aria-label="replay">↻</button>
+          <button class="replay spd" aria-label="speed">1x</button>
+          <button class="replay skip" aria-label="skip to end"><svg viewBox="0 0 22 16" aria-hidden="true"><path d="M1 1 L9 8 L1 15 Z M9 1 L17 8 L9 15 Z" fill="currentColor"/><rect x="18" y="1" width="3" height="14" rx="1" fill="currentColor"/></svg></button>
+        </div>
       </div>
     </div>
   </section>
@@ -170,8 +179,12 @@ body.focusing .home{opacity:.4;transition-duration:.9s}
           <button data-m="d" aria-label="decimal" aria-pressed="false"><span class="dlab">0,25</span></button>
         </div>
         <div class="exs2" id="exs2"></div>
-        <button class="pp replay" id="pp2" aria-label="pause" aria-pressed="false" hidden>❚❚</button>
-        <button class="replay" id="rp2" aria-label="replay" hidden>↻</button>
+        <div class="ctl" id="ctl2" hidden>
+          <button class="pp replay" id="pp2" aria-label="pause" aria-pressed="false">❚❚</button>
+          <button class="replay" id="rp2" aria-label="replay">↻</button>
+          <button class="replay spd" aria-label="speed">1x</button>
+          <button class="replay skip" aria-label="skip to end"><svg viewBox="0 0 22 16" aria-hidden="true"><path d="M1 1 L9 8 L1 15 Z M9 1 L17 8 L9 15 Z" fill="currentColor"/><rect x="18" y="1" width="3" height="14" rx="1" fill="currentColor"/></svg></button>
+        </div>
       </div>
     </div>
   </section>
@@ -191,16 +204,18 @@ try{DM=localStorage.getItem('adh-dm')||','; METHOD=localStorage.getItem('adh-m')
 const fmt=s=>String(s).replace(/(\d),(\d)/g,'$1'+DM+'$2');
 
 /* ---------- clock: one virtual time that stops while paused ---------- */
-let clock=0, last=null, paused=false;
+let clock=0, last=null, paused=false, SPEED=1;
 const STAGES=[];
-function frame(t){
-  if(last!==null && !paused) clock+=Math.min(t-last,100);
-  last=t;
+function tick(){
   for(const S of STAGES) for(const tw of S.tws.slice()){
     const p=Math.min(1,Math.max(0,(clock-tw.t0)/tw.d));
     tw.fn(tw.e(p));
     if(p>=1){const i=S.tws.indexOf(tw); if(i>=0) S.tws.splice(i,1); tw.res();}
   }
+}
+function frame(t){
+  if(last!==null && !paused) clock+=Math.min(t-last,100)*SPEED;
+  last=t; tick();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
@@ -1015,7 +1030,7 @@ async function go(n,job){
   const id=++RUN; STAGES.forEach(S=>S.tws=[]); running=true;
   setPaused(false);
   const sec=document.getElementById('sec'+n);
-  document.getElementById('pp'+n).hidden=false; document.getElementById('rp'+n).hidden=false;
+  document.getElementById('ctl'+n).hidden=false;
   focusOn(sec,true);
   await document.fonts.ready;
   if(id!==RUN) return false;
@@ -1089,6 +1104,30 @@ dmb.forEach(b=>b.addEventListener('click',()=>setDM(b.dataset.dm)));
 setDM(DM);
 
 pps.forEach(pp=>pp.addEventListener('click',()=>{if(running) setPaused(!paused);}));
+// speed: 0,5x → 1x → 1,5x → 2x → 4x → 0,5x
+const SPEEDS=[.5,1,1.5,2,4], spds=[...document.querySelectorAll('.spd')];
+try{const v=+localStorage.getItem('adh-sp'); if(SPEEDS.includes(v)) SPEED=v;}catch(e){}
+function showSpeed(){document.querySelectorAll('.spd').forEach(b=>{b.textContent=fmt(String(SPEED).replace('.',','))+'x'; b.setAttribute('aria-label','speed '+SPEED);});}
+spds.forEach(b=>b.addEventListener('click',()=>{
+  SPEED=SPEEDS[(SPEEDS.indexOf(SPEED)+1)%SPEEDS.length]; try{localStorage.setItem('adh-sp',SPEED);}catch(e){}
+  showSpeed();
+}));
+// skip to end: the clock jumps from one finished movement to the next until the example is done
+const chan=new MessageChannel(), yieldNow=()=>new Promise(r=>{chan.port1.onmessage=()=>r(); chan.port2.postMessage(0);});
+let skipping=false;
+async function skipToEnd(){
+  if(!running || skipping) return;
+  const id=RUN; skipping=true; setPaused(false);
+  for(let guard=0; running && id===RUN && guard<200000; guard++){
+    let t=Infinity; for(const S of STAGES) for(const tw of S.tws) t=Math.min(t,tw.t0+tw.d);
+    if(t<Infinity){clock=Math.max(clock,t); tick();}
+    await yieldNow();
+  }
+  skipping=false;
+}
+document.querySelectorAll('.skip').forEach(b=>b.addEventListener('click',skipToEnd));
+showSpeed();
+document.querySelectorAll('.dmbox button').forEach(b=>b.addEventListener('click',()=>showSpeed()));
 document.addEventListener('keydown',e=>{
   if(e.code==='Space' && running && !(e.target instanceof HTMLButtonElement)){e.preventDefault();setPaused(!paused);}
 });
